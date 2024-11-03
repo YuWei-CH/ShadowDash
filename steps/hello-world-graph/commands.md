@@ -42,8 +42,8 @@ g++ -fPIC -shared -I../../src ../../src/build_log.cc \
     ../../src/version.cc -o libninja.so
 g++ -fPIC test1.cc -I../../src -L./ -lninja -Wl,-rpath=. -o test1
 
-#wayne using
-g++-11 -fPIC test1.cc -I../../src -L./ -lninja -Wl,-rpath=. -o test1
+#arm using
+g++-11 -fPIC test1.cc -I../../src ./libninja.dylib -o test1
 
 ### For debug
 g++ -g test1.cc -I../../src -L./ -lninja -Wl,-rpath=. -o test1
