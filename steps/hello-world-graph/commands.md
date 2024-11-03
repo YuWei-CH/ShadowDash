@@ -2,7 +2,10 @@
 
 export LD_LIBRARY_PATH=/home/yuwei/Documents/ShadowDash/build:$LD_LIBRARY_PATH
 
+#for linux
 g++ -I /home/yuwei/Documents/ShadowDash/src -L /home/yuwei/Documents/ShadowDash/build -lninja_shared -o test1 test1.cc
+#below is for mac
+g++-11 -I /Users/waynewang/ShadowDash/src -L /Users/waynewang/ShadowDash/build -lninja_shared -Wl,-rpath,. -o test1 test1.cc
 or
 g++ -I /home/yuwei/Documents/ShadowDash/src -L /home/yuwei/Documents/ShadowDash/build -lninja_shared -Wl,-rpath,/home/yuwei/Documents/ShadowDash/build -o test1 test1.cc
 
@@ -38,6 +41,9 @@ g++ -fPIC -shared -I../../src ../../src/build_log.cc \
     ../../src/depfile_parser.cc \
     ../../src/version.cc -o libninja.so
 g++ -fPIC test1.cc -I../../src -L./ -lninja -Wl,-rpath=. -o test1
+
+#wayne using
+g++-11 -fPIC test1.cc -I../../src -L./ -lninja -Wl,-rpath=. -o test1
 
 ### For debug
 g++ -g test1.cc -I../../src -L./ -lninja -Wl,-rpath=. -o test1
