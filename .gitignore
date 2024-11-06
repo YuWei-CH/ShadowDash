@@ -47,3 +47,6 @@
 # Visual Studio files
 /.vs/
 /out/
+
+#arm arch. shared lib structure
+*.dylib
