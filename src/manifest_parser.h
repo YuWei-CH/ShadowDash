@@ -45,13 +45,13 @@ struct ManifestParser : public Parser {
     return Parse("input", input, err);
   }
 
-private:
+ private:
   /// Parse a file, given its contents as a string.
   bool Parse(const std::string& filename, const std::string& input,
              std::string* err);
 
   /// Parse various statement types.
-  bool ParsePool(std::string* err); // wokers 
+  bool ParsePool(std::string* err);
   bool ParseRule(std::string* err);
   bool ParseLet(std::string* key, EvalString* val, std::string* err);
   bool ParseEdge(std::string* err);
