@@ -50,8 +50,7 @@
 /out/
 
 # dev files for Shadowdash
-commands.md
-new-graph/commands.md
-new-graph/CMakeFiles
-new-graph/libninja.so
+*commands.md
+*CMakeFiles
+*.so
 *.dylib
