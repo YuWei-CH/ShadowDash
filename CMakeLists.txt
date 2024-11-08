@@ -184,6 +184,7 @@ add_library(libninja OBJECT
 	src/metrics.cc
 	src/missing_deps.cc
 	src/parser.cc
+	src/real_command_runner.cc
 	src/state.cc
 	src/status_printer.cc
 	src/string_piece_util.cc
@@ -225,6 +226,7 @@ else()
 endif()
 
 target_compile_features(libninja PUBLIC cxx_std_11)
+target_compile_features(libninja-re2c PUBLIC cxx_std_11)
 
 #Fixes GetActiveProcessorCount on MinGW
 if(MINGW)
@@ -244,6 +246,12 @@ if(NINJA_BUILD_BINARY)
 
 	if(WIN32)
 		target_sources(ninja PRIVATE windows/ninja.manifest)
+	endif()
+
+	option(NINJA_CLANG_TIDY "Run clang-tidy on source files" OFF)
+	if(NINJA_CLANG_TIDY)
+		set_target_properties(libninja PROPERTIES CXX_CLANG_TIDY "clang-tidy;--use-color")
+		set_target_properties(ninja    PROPERTIES CXX_CLANG_TIDY "clang-tidy;--use-color")
 	endif()
 endif()
 
