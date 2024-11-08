@@ -53,3 +53,4 @@ commands.md
 new-graph/commands.md
 new-graph/CMakeFiles
 new-graph/libninja.so
+*.dylib
