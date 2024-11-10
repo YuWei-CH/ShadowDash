@@ -95,6 +95,10 @@ static constexpr auto out = "out"_v;
 static auto phony = rule{{}};
 static auto console = pool_(binding("depth", str{ {"1"} }));
 
+extern "C" void InitializeManifest();  // Initialize all manifest objects
+extern "C" std::vector<pool_> GetPools();
+extern "C" std::vector<rule> GetRules();
+extern "C" std::vector<build> GetBuilds();
 }
 
 #define let(name, ...) \
