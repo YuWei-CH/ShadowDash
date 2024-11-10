@@ -1,50 +1,35 @@
-#include <chrono>
-#include <fstream>
-#include <iostream>
-#include <memory>
+#include "ninja.h"
 
-#include "build.h"
-#include "build_log.h"
-#include "deps_log.h"
-#include "disk_interface.h"
-#include "graph.h"
-#include "state.h"
-#include "status.h"
-#include "util.h"
 using namespace std;
 
-void CreateHelloWorldGraph(State* state) {
+void CreateHelloWorldGraph(State* state, NinjaMain& ninja) {
   BindingEnv env;
-  env.AddBinding("in", "hello_world.cpp");
-  env.AddBinding("out", "hello_world");
-  env.AddBinding("DEP_FILE", "hello_world.d");
+  env.AddBinding("inputFile", "hello_world.cpp");
+  env.AddBinding("linkFile", "hello_world.o");
+  env.AddBinding("outputFile", "hello_world");
 
   // Create rules
   Rule* cxx_compiler = new Rule("CXX_COMPILER__hello_world_");
 
   // Create command
   EvalString command;
-  command.AddText("g++ -std=gnu++11 -MMD -MF ");
-  command.AddSpecial("$in");
-  command.AddText(" -o ");
-  command.AddSpecial("$out");
+  command.AddText("g++");
+  command.AddText(" ");
+  command.AddText("-c");
+  command.AddText(" ");
+  command.AddSpecial("in");
+  command.AddText(" ");
+  command.AddText("-o");
+  command.AddText(" ");
+  command.AddSpecial("out");
   cxx_compiler->AddBinding("command", command);
 
   // Create description
   EvalString description;
-  description.AddText("Building CXX object ");
-  description.AddSpecial("$out");
+  description.AddText("Building CXX object");
+  description.AddText(" ");
+  description.AddSpecial("out");
   cxx_compiler->AddBinding("description", description);
-
-  // Add dependency file
-  EvalString depfile;
-  depfile.AddSpecial("$DEP_FILE");
-  cxx_compiler->AddBinding("depfile", depfile);
-
-  // Add dependency format
-  EvalString deps;
-  deps.AddText("g++");
-  cxx_compiler->AddBinding("deps", deps);
 
   // Add rule to state
   state->bindings_.AddRule(cxx_compiler);
@@ -52,74 +37,64 @@ void CreateHelloWorldGraph(State* state) {
   Rule* cxx_linker = new Rule("CXX_EXECUTABLE_LINKER__hello_world_");
   EvalString link;
   link.AddText("g++ ");
-  link.AddSpecial("$in");
+  link.AddText(" ");
+  link.AddSpecial("in");
+  link.AddText(" ");
   link.AddText(" -o ");
-  link.AddSpecial("$out");
+  link.AddText(" ");
+  link.AddSpecial("out");
   cxx_linker->AddBinding("command", link);
+
+  // Link description
   EvalString linkDescription;
-  description.AddText("Linking CXX object ");
-  description.AddSpecial("$out");
+  linkDescription.AddText("Linking CXX object");
+  linkDescription.AddText(" ");
+  linkDescription.AddSpecial("$out");
   cxx_linker->AddBinding("description", linkDescription);
+
   state->bindings_.AddRule(cxx_linker);
 
-  // Create nodes
-  Node* source_file = state->GetNode("hello_world.cpp", 0);
-  Node* object_file =
-      state->GetNode("CMakeFiles/hello_world.dir/hello_world.cpp.o", 0);
-  Node* executable = state->GetNode("hello_world", 0);
+  // Create executable node
+  Node* executable = state->GetNode(env.LookupVariable("outputFile"), 0);
 
-  // Create edges
-  // cout << "Binding 'in': " << env.LookupVariable("in") << endl;
-  // cout << "Binding 'out': " << env.LookupVariable("out") << endl;
-  // cout << "Binding 'DEP_FILE': " << env.LookupVariable("DEP_FILE") << endl;
-  string error_message;
-  string* err_ptr = &error_message;
-  Edge* compile_edge = state->AddEdge(cxx_compiler);
-  compile_edge->env_ = &env;
-  if (!state->AddOut(compile_edge, object_file->path(), 0, err_ptr)) {
-    // Handle error
-    *err_ptr = "Failed to add output to compile edge\n";
-    Error(error_message.c_str());
-    return;
-  }
-  compile_edge->inputs_.push_back(source_file);
+  // Create compilation edges
+  string err;
+  Edge* compile_edge = ninja.GetState().AddEdge(cxx_compiler);
 
-  Edge* link_edge = state->AddEdge(cxx_linker);
-  if (!state->AddOut(link_edge, executable->path(), 0, err_ptr)) {
-    // Handle error
-    *err_ptr = "Failed to add output to link edge\n";
-    Error(error_message.c_str());
-    return;
-  }
-  link_edge->inputs_.push_back(object_file);
-
-  // Set up environment for compile edge
+  // Initialize the environment and bind the necessary variables.
   if (compile_edge->env_ == nullptr) {
     compile_edge->env_ = new BindingEnv(&state->bindings_);
   }
-  compile_edge->env_->AddBinding(
-      "DEP_FILE", "CMakeFiles/hello_world.dir/hello_world.cpp.o.d");
+  compile_edge->env_->AddBinding("in", env.LookupVariable("inputFile"));
+  compile_edge->env_->AddBinding("out", env.LookupVariable("linkFile"));
 
-  // Add default target
-  if (!state->AddDefault(executable->path(), err_ptr)) {
-    // Handle error
-    *err_ptr = "Failed to add default target: \n";
-    Error(error_message.c_str());
+  if (!ninja.state_.AddOut(compile_edge, env.LookupVariable("linkFile"), 0,
+                           &err)) {
+    Error(("Failed to add output to compile edge: " + err).c_str());
     return;
   }
-}
+  ninja.state_.AddIn(compile_edge, env.LookupVariable("inputFile"), 0);
 
-void CreateLogFile(const string& path) {
-  ifstream infile(path);
-  if (!infile.good()) {
-    ofstream outfile(path);
-    if (outfile.is_open()) {
-      cout << "Log file created: " << path << endl;
-    } else {
-      cerr << "Failed to create log file: " << path << endl;
-    }
-  } else {
-    cout << "Log file already exists: " << path << endl;
+  // Create link edges
+  Edge* link_edge = ninja.GetState().AddEdge(cxx_linker);
+
+  if (link_edge->env_ == nullptr) {
+    link_edge->env_ = new BindingEnv(&state->bindings_);
+  }
+  link_edge->env_->AddBinding("in", env.LookupVariable("linkFile"));
+  link_edge->env_->AddBinding("out", env.LookupVariable("outputFile"));
+
+  if (!ninja.state_.AddOut(link_edge, env.LookupVariable("outputFile"), 0,
+                           &err)) {
+    Error(("Failed to add output to link edge: " + err).c_str());
+    return;
+  }
+  ninja.state_.AddIn(link_edge, env.LookupVariable("linkFile"), 0);
+
+  // Add default target
+  if (!state->AddDefault(env.LookupVariable("outputFile"), &err)) {
+    Error(("Failed to add default target: " + err).c_str());
+    return;
   }
 }
 
@@ -127,68 +102,25 @@ void Error(const string& message) {
   cerr << "Error: " << message << endl;
 }
 
-int main() {
-  cout << "Build start" << endl;
+int main(int argc, char** argv) {
+  const char* ninja_command = argv[0];
 
-  State state;
-  // Create Graph
-  CreateHelloWorldGraph(&state);
+  cout << "Build start" << endl;
 
   // Config with Verbose output and 1 process
   BuildConfig config;
   config.verbosity = config.VERBOSE;
   config.parallelism = 1;  // 1 process
+  State state;
+  NinjaMain ninja(ninja_command, config);
 
-  BuildLog build_log;
-  DepsLog deps_log;
-  RealDiskInterface disk_interface;
+  // Create Graph
+  CreateHelloWorldGraph(&state, ninja);
+
   Status* status = Status::factory(config);
-
-  // Create log file
-  const string log_path = "build_log";
-  string build_message;
-  CreateLogFile(log_path);
-  const string deps_path = "deps_log";
-  string deps_message;
-  CreateLogFile(deps_path);
-
-  if (!build_log.Load(log_path, &build_message)) {
-    Error("Failed to load build log");
-    delete status;
-    return 1;
-  }
-
-  if (!deps_log.Load(deps_path, &state, &deps_message)) {
-    Error("Failed to load dependencies log");
-    delete status;
-    return 1;
-  }
-
-  // Get currrent timestamp（ms）
-  int64_t start_time_millis =
-      std::chrono::duration_cast<std::chrono::milliseconds>(
-          std::chrono::system_clock::now().time_since_epoch())
-          .count();
-
-  // Create the Builder object
-  Builder builder(&state, config, &build_log, &deps_log, &disk_interface,
-                  status, start_time_millis);
-
-  string err;
-  if (!builder.AddTarget("hello_world", &err)) {
-    Error("Failed to add build target: " + err);
-    delete status;
-    return 1;
-  }
-
-  if (!builder.Build(&err)) {
-    Error("Build failed: " + err);
-    delete status;
-    return 1;
-  }
+  int result = ninja.RunBuild(argc - 1, &argv[1], status);
 
   cout << "Build completed" << endl;
-
   delete status;
   return 0;
 }
