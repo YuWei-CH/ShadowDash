@@ -60,3 +60,8 @@
 *hello_world
 *hello_world.o
 *test1
+
+# New Language files
+src/shadowdash/manifest.o
+src/shadowdash/manifest.so
+src/shadowdash/manifest.h.gch
