@@ -59,7 +59,7 @@ void CreateHelloWorldGraph(State* state, NinjaMain& ninja) {
 
   // Create compilation edges
   string err;
-  Edge* compile_edge = ninja.state_.AddEdge(cxx_compiler);
+  Edge* compile_edge = ninja.GetState().AddEdge(cxx_compiler);
 
   // Initialize the environment and bind the necessary variables.
   if (compile_edge->env_ == nullptr) {
@@ -76,7 +76,7 @@ void CreateHelloWorldGraph(State* state, NinjaMain& ninja) {
   ninja.state_.AddIn(compile_edge, env.LookupVariable("inputFile"), 0);
 
   // Create link edges
-  Edge* link_edge = ninja.state_.AddEdge(cxx_linker);
+  Edge* link_edge = ninja.GetState().AddEdge(cxx_linker);
 
   if (link_edge->env_ == nullptr) {
     link_edge->env_ = new BindingEnv(&state->bindings_);
