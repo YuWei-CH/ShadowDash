@@ -1,111 +1,17 @@
+#include "manifest.h"
 #include "ninja.h"
 
-using namespace std;
+// using namespace std;
 
-void CreateHelloWorldGraph(State* state, NinjaMain& ninja) {
-  BindingEnv env;
-  env.AddBinding("inputFile", "hello_world.cpp");
-  env.AddBinding("linkFile", "hello_world.o");
-  env.AddBinding("outputFile", "hello_world");
-
-  // Create rules
-  Rule* cxx_compiler = new Rule("CXX_COMPILER__hello_world_");
-
-  // Create command
-  EvalString command;
-  command.AddText("g++");
-  command.AddText(" ");
-  command.AddText("-c");
-  command.AddText(" ");
-  command.AddSpecial("in");
-  command.AddText(" ");
-  command.AddText("-o");
-  command.AddText(" ");
-  command.AddSpecial("out");
-  cxx_compiler->AddBinding("command", command);
-
-  // Create description
-  EvalString description;
-  description.AddText("Building CXX object");
-  description.AddText(" ");
-  description.AddSpecial("out");
-  cxx_compiler->AddBinding("description", description);
-
-  // Add rule to state
-  state->bindings_.AddRule(cxx_compiler);
-
-  Rule* cxx_linker = new Rule("CXX_EXECUTABLE_LINKER__hello_world_");
-  EvalString link;
-  link.AddText("g++ ");
-  link.AddText(" ");
-  link.AddSpecial("in");
-  link.AddText(" ");
-  link.AddText(" -o ");
-  link.AddText(" ");
-  link.AddSpecial("out");
-  cxx_linker->AddBinding("command", link);
-
-  // Link description
-  EvalString linkDescription;
-  linkDescription.AddText("Linking CXX object");
-  linkDescription.AddText(" ");
-  linkDescription.AddSpecial("$out");
-  cxx_linker->AddBinding("description", linkDescription);
-
-  state->bindings_.AddRule(cxx_linker);
-
-  // Create executable node
-  Node* executable = state->GetNode(env.LookupVariable("outputFile"), 0);
-
-  // Create compilation edges
-  string err;
-  Edge* compile_edge = ninja.GetState().AddEdge(cxx_compiler);
-
-  // Initialize the environment and bind the necessary variables.
-  if (compile_edge->env_ == nullptr) {
-    compile_edge->env_ = new BindingEnv(&state->bindings_);
-  }
-  compile_edge->env_->AddBinding("in", env.LookupVariable("inputFile"));
-  compile_edge->env_->AddBinding("out", env.LookupVariable("linkFile"));
-
-  if (!ninja.state_.AddOut(compile_edge, env.LookupVariable("linkFile"), 0,
-                           &err)) {
-    Error(("Failed to add output to compile edge: " + err).c_str());
-    return;
-  }
-  ninja.state_.AddIn(compile_edge, env.LookupVariable("inputFile"), 0);
-
-  // Create link edges
-  Edge* link_edge = ninja.GetState().AddEdge(cxx_linker);
-
-  if (link_edge->env_ == nullptr) {
-    link_edge->env_ = new BindingEnv(&state->bindings_);
-  }
-  link_edge->env_->AddBinding("in", env.LookupVariable("linkFile"));
-  link_edge->env_->AddBinding("out", env.LookupVariable("outputFile"));
-
-  if (!ninja.state_.AddOut(link_edge, env.LookupVariable("outputFile"), 0,
-                           &err)) {
-    Error(("Failed to add output to link edge: " + err).c_str());
-    return;
-  }
-  ninja.state_.AddIn(link_edge, env.LookupVariable("linkFile"), 0);
-
-  // Add default target
-  if (!state->AddDefault(env.LookupVariable("outputFile"), &err)) {
-    Error(("Failed to add default target: " + err).c_str());
-    return;
-  }
-}
-
-void Error(const string& message) {
-  cerr << "Error: " << message << endl;
-}
+using namespace shadowdash;
+std::vector<build> manifest();
 
 int main(int argc, char** argv) {
   const char* ninja_command = argv[0];
 
   cout << "Build start" << endl;
+
+  std::vector<build> builds = manifest();
 
   // Config with Verbose output and 1 process
   BuildConfig config;
@@ -114,8 +20,52 @@ int main(int argc, char** argv) {
   State state;
   NinjaMain ninja(ninja_command, config);
 
-  // Create Graph
-  CreateHelloWorldGraph(&state, ninja);
+  // // Create Graph
+  // CreateHelloWorldGraph(&state, ninja);
+
+  // Read build
+  for (const build& b : builds) {
+    const str& first_output = b.outputs_[0];
+
+    const Token& first_output_token = *first_output.tokens_.begin();
+    StringPiece output_piece(first_output_token.value_.data(),
+                             first_output_token.value_.size());
+    // Get the first token in first_output
+    std::cout << "First output token value: " << output_piece.AsString()
+              << std::endl;
+
+    rule& rule_ = b.rule_;
+
+    const str& first_input = b.inputs_[0];
+    const Token& first_input_token = *first_input.tokens_.begin();
+    StringPiece input_piece(first_input_token.value_.data(),
+                            first_input_token.value_.size());
+    std::cout << "First input token value: " << input_piece.AsString()
+              << std::endl;
+
+    shadowdash::map bindings_ = b.bindings_;  // TODO: add to value
+
+    Rule* new_rule = new Rule(rule_.name_);
+
+    // Retrieve Token
+    for (const auto& binding : rule_.bindings_) {
+      EvalString* value = new EvalString;
+      for (shadowdash::Token token : binding.second.tokens_) {
+        StringPiece piece(token.value_.data(), token.value_.size());
+        if (token.type_ == Token::Type::LITERAL)
+          value->AddText(piece);
+        else if (token.type_ == Token::Type::VAR)
+          if (token.value_ == "in"_v.value_)
+            value->AddSpecial(input_piece);
+          else if (token.value_ == "out"_v.value_)
+            value->AddSpecial(output_piece);
+        value->AddSpecial(piece);
+      }
+      new_rule->AddBinding(string(binding.first), *value);
+    }
+
+    state.bindings_.AddRule(new_rule);
+  }
 
   Status* status = Status::factory(config);
   int result = ninja.RunBuild(argc - 1, &argv[1], status);

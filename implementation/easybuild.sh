@@ -66,9 +66,13 @@ $CXX -fPIC ${shared_flag} -I../src ${extra_flags} ../src/build_log.cc \
     ../src/depfile_parser.cc \
     ../src/version.cc -o "libninja.${lib_extension}"
 
-# Compile test1.cc
-echo "Compiling shadowDash.cc..."
-$CXX -fPIC shadowDash.cc -I../src -L./ -lninja ${rpath_flag} ${extra_flags} -o shadowDash
+# Build Manifest dynamic library using simplified command
+echo "Building libmanifest.${lib_extension}..."
+$CXX -std=c++17 ${shared_flag} -fPIC -o libmanifest.${lib_extension} ../src/shadowdash/manifest.cc
 
-# Compile hello world using test1
-echo "Running shadowDash.cc..."
+# Build shadowDash using both libraries
+echo "Compiling shadowDash.cc with libninja and libmanifest..."
+$CXX -fPIC shadowDash.cc -I../src -I../src/shadowdash -L./ -lninja -lmanifest ${rpath_flag} ${extra_flags} -o shadowDash
+
+# Compile Done
+echo "shadowDash.cc Done"
