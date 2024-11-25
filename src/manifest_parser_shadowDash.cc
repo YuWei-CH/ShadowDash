@@ -58,8 +58,107 @@ bool ManifestParser::ParseManifestFromObjects(std::string* err) {
         env_->AddRule(rule);
     }
 
-    // Load and parse build objects
-    auto builds = shadowdash::GetBuilds();
+        // Load and parse build objects
+        auto builds = shadowdash::GetBuilds();
+
+        bool ManifestParser::ParseEdge(string* err) {
+    vector<EvalString> ins, outs, validations;
+
+    {
+        EvalString out;
+        if (!lexer_.ReadPath(&out, err))
+        return false;
+        while (!out.empty()) {
+        outs.push_back(out);
+
+        out.Clear();
+        if (!lexer_.ReadPath(&out, err))
+            return false;
+        }
+    }
+
+    // Add all implicit outs, counting how many as we go.
+    int implicit_outs = 0;
+    if (lexer_.PeekToken(Lexer::PIPE)) {
+        for (;;) {
+        EvalString out;
+        if (!lexer_.ReadPath(&out, err))
+            return false;
+        if (out.empty())
+            break;
+        outs.push_back(out);
+        ++implicit_outs;
+        }
+    }
+
+    if (outs.empty())
+        return lexer_.Error("expected path", err);
+
+    if (!ExpectToken(Lexer::COLON, err))
+        return false;
+
+    string rule_name;
+    if (!lexer_.ReadIdent(&rule_name))
+        return lexer_.Error("expected build command name", err);
+
+    const Rule* rule = env_->LookupRule(rule_name);
+    if (!rule)
+        return lexer_.Error("unknown build rule '" + rule_name + "'", err);
+
+    for (;;) {
+        // XXX should we require one path here?
+        EvalString in;
+        if (!lexer_.ReadPath(&in, err))
+        return false;
+        if (in.empty())
+        break;
+        ins.push_back(in);
+    }
+
+    // Add all implicit deps, counting how many as we go.
+    int implicit = 0;
+    if (lexer_.PeekToken(Lexer::PIPE)) {
+        for (;;) {
+        EvalString in;
+        if (!lexer_.ReadPath(&in, err))
+            return false;
+        if (in.empty())
+            break;
+        ins.push_back(in);
+        ++implicit;
+        }
+    }
+
+    // Add all order-only deps, counting how many as we go.
+    int order_only = 0;
+    if (lexer_.PeekToken(Lexer::PIPE2)) {
+        for (;;) {
+        EvalString in;
+        if (!lexer_.ReadPath(&in, err))
+            return false;
+        if (in.empty())
+            break;
+        ins.push_back(in);
+        ++order_only;
+        }
+    }
+
+    // Add all validations, counting how many as we go.
+    if (lexer_.PeekToken(Lexer::PIPEAT)) {
+        for (;;) {
+        EvalString validation;
+        if (!lexer_.ReadPath(&validation, err))
+            return false;
+        if (validation.empty())
+            break;
+        validations.push_back(validation);
+        }
+    }
+
+    if (!ExpectToken(Lexer::NEWLINE, err))
+        return false;
+
+
     for (const auto& build_obj : builds) {
         // Extract outputs, inputs, rule, and bindings
         std::vector<std::string> outputs, inputs;

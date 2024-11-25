@@ -2,7 +2,7 @@
 
 using namespace shadowdash;
 
-void manifest() {
+int manifest() {
   let(flags, "-O3");
 
   let(pool_depth, "4");
@@ -48,4 +48,6 @@ void manifest() {
 
   default_(str{ "hello" });
   default_(list{ str{ "foo1" }, str{ "foo2" } });
+
+  return 0;
 }

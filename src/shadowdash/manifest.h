@@ -54,7 +54,21 @@ public:
 
 class rule {
 public:
-  rule(map bindings) {}
+    rule(map bindings) : bindings_(bindings) {}
+
+    bool HasRequiredBindings() const {
+        auto it = bindings_.find("command");
+        return it != bindings_.end() && !it->second.tokens_.empty();
+    }
+
+    const shadowdash::str& GetBinding(const std::string& key) const {
+        auto it = bindings_.find(key);
+        if (it == bindings_.end()) {
+            throw std::runtime_error("Binding not found: " + key);
+        }
+        return it->second;
+    }
+    map bindings_;
 };
 
 class pool_ {
@@ -64,6 +78,16 @@ public:
 
 class build {
 public:
+  // Member variables
+  list outputs_;
+  list implicit_outputs_;
+  rule& rule_;
+  list inputs_;
+  list implicit_inputs_;
+  list order_only_inputs_;
+  map bindings_;
+
+  // Constructor
   build(
     list outputs,
     list implicit_outputs,
@@ -72,7 +96,14 @@ public:
     list implicit_inputs,
     list order_only_inputs,
     map bindings
-  ){}
+  )
+    : outputs_(outputs),
+      implicit_outputs_(implicit_outputs),
+      rule_(rule),
+      inputs_(inputs),
+      implicit_inputs_(implicit_inputs),
+      order_only_inputs_(order_only_inputs),
+      bindings_(bindings) {}
 };
 
 class default_{
