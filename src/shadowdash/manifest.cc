@@ -3,49 +3,65 @@
 using namespace shadowdash;
 
 void manifest() {
-  let(flags, "-O3");
+    // Define variables
+    let(flags, "-O3");
 
-  let(pool_depth, "4");
+    let(pool_depth, "4");
 
-  auto heavy_object_pool = pool_(bind(depth, "pool_depth"_v));
+    // Define a pool
+    auto heavy_object_pool = pool_(bind("depth", str{ "pool_depth" }));
 
-  auto compile = rule( {
-      bind(command, "g++", "flags"_v, "-c", in, "-o", out),  
-      bind(pool, "heavy_object_pool"_v)
-  } );
+    // Define rules
+    auto compile = rule(
+        "compile",
+        {
+            bind("command", str{ Token("g++"), Token("flags"), Token("-c"), in, Token("-o"), out }),
+            bind("pool", str{ "heavy_object_pool" })
+        }
+    );
 
-  auto link = rule( {
-      bind(command, "g++", in, "-o", out), 
-  } );
+    auto link = rule(
+        "link",
+        {
+            bind("command", str{ "g++", in, "-o", out })
+        }
+    );
 
-  auto build_c = build(list{ str{ "hello.o" } }, 
-      {},
-      compile,
-      list{ str{ "hello.cc" } },
-      {},
-      {},
-      { bind(flags, "-O2"), 
-        bind(pool, "console"_v) }
-  );
+    // Define builds
+    auto build_c = build(
+        list{ str{ "hello.o" } },   // Outputs
+        {},                         // Implicit Outputs
+        compile,                    // Rule
+        list{ str{ "hello.cc" } },  // Inputs
+        {},                         // Implicit Inputs
+        {},                         // Order-Only Inputs
+        {
+            bind("flags", str{ "-O2" }),
+            bind("pool", str{ "console" })
+        }                           // Bindings
+    );
 
-  auto build_l = build(list{ str{ "hello" } },
-      {},
-      link,
-      list{ str{ "hello.o" } },
-      {},
-      {},
-      {}
-  );
+    auto build_l = build(
+        list{ str{ "hello" } },     // Outputs
+        {},                         // Implicit Outputs
+        link,                       // Rule
+        list{ str{ "hello.o" } },   // Inputs
+        {},                         // Implicit Inputs
+        {},                         // Order-Only Inputs
+        {}                          // Bindings
+    );
 
-  auto build_p = build(list{ str{ "dummy" } },
-      {},
-      phony,
-      {},
-      {},
-      {},
-      {}
-  );
+    auto build_p = build(
+        list{ str{ "dummy" } },     // Outputs
+        {},                         // Implicit Outputs
+        phony,                      // Rule
+        {},                         // Inputs
+        {},                         // Implicit Inputs
+        {},                         // Order-Only Inputs
+        {}                          // Bindings
+    );
 
-  default_(str{ "hello" });
-  default_(list{ str{ "foo1" }, str{ "foo2" } });
+    // Define default targets
+    default_(str{ "hello" });
+    default_(list{ str{ "foo1" }, str{ "foo2" } });
 }
