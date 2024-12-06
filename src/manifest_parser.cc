@@ -29,8 +29,7 @@ using namespace std;
 
 ManifestParser::ManifestParser(State* state, FileReader* file_reader,
                                ManifestParserOptions options)
-    : Parser(state, file_reader),
-      options_(options), quiet_(false) {
+    : Parser(state, file_reader), options_(options), quiet_(false) {
   env_ = &state->bindings_;
 }
 
@@ -87,13 +86,11 @@ bool ManifestParser::Parse(const string& filename, const string& input,
     case Lexer::NEWLINE:
       break;
     default:
-      return lexer_.Error(string("unexpected ") + Lexer::TokenName(token),
-                          err);
+      return lexer_.Error(string("unexpected ") + Lexer::TokenName(token), err);
     }
   }
   return false;  // not reached
 }
-
 
 bool ManifestParser::ParsePool(string* err) {
   string name;
@@ -131,7 +128,6 @@ bool ManifestParser::ParsePool(string* err) {
   return true;
 }
 
-
 bool ManifestParser::ParseRule(string* err) {
   string name;
   if (!lexer_.ReadIdent(&name))
@@ -162,8 +158,10 @@ bool ManifestParser::ParseRule(string* err) {
 
   if (rule->bindings_["rspfile"].empty() !=
       rule->bindings_["rspfile_content"].empty()) {
-    return lexer_.Error("rspfile and rspfile_content need to be "
-                        "both specified", err);
+    return lexer_.Error(
+        "rspfile and rspfile_content need to be "
+        "both specified",
+        err);
   }
 
   if (rule->bindings_["command"].empty())
@@ -365,7 +363,7 @@ bool ManifestParser::ParseEdge(string* err) {
 
   edge->validations_.reserve(validations.size());
   for (std::vector<EvalString>::iterator v = validations.begin();
-      v != validations.end(); ++v) {
+       v != validations.end(); ++v) {
     string path = v->Evaluate(env);
     if (path.empty())
       return lexer_.Error("empty path", err);
@@ -386,9 +384,10 @@ bool ManifestParser::ParseEdge(string* err) {
     if (new_end != edge->inputs_.end()) {
       edge->inputs_.erase(new_end, edge->inputs_.end());
       if (!quiet_) {
-        Warning("phony target '%s' names itself as an input; "
-                "ignoring [-w phonycycle=warn]",
-                out->path().c_str());
+        Warning(
+            "phony target '%s' names itself as an input; "
+            "ignoring [-w phonycycle=warn]",
+            out->path().c_str());
       }
     }
   }
@@ -403,7 +402,7 @@ bool ManifestParser::ParseEdge(string* err) {
     edge->dyndep_ = state_->GetNode(dyndep, slash_bits);
     edge->dyndep_->set_dyndep_pending(true);
     vector<Node*>::iterator dgi =
-      std::find(edge->inputs_.begin(), edge->inputs_.end(), edge->dyndep_);
+        std::find(edge->inputs_.begin(), edge->inputs_.end(), edge->dyndep_);
     if (dgi == edge->inputs_.end()) {
       return lexer_.Error("dyndep '" + dyndep + "' is not an input", err);
     }
