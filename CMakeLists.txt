@@ -3,6 +3,13 @@ cmake_minimum_required(VERSION 3.15)
 include(CheckSymbolExists)
 include(CheckIPOSupported)
 
+find_program(CLANG_TIDY_EXE NAMES clang-tidy)
+if(CLANG_TIDY_EXE)
+  set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}")
+else()
+  message(WARNING "clang-tidy not found!")
+endif()
+
 option(NINJA_BUILD_BINARY "Build ninja binary" ON)
 option(NINJA_FORCE_PSELECT "Use pselect() even on platforms that provide ppoll()" OFF)
 
@@ -312,45 +319,6 @@ if(BUILD_TESTING)
   endif()
 
   add_test(NAME NinjaTest COMMAND ninja_test)
-
-
-  set(NINJA_TEST_SOURCES
-    src/build_log_test.cc
-    src/build_test.cc
-    src/clean_test.cc
-    src/clparser_test.cc
-    src/depfile_parser_test.cc
-    src/deps_log_test.cc
-    src/disk_interface_test.cc
-    src/dyndep_parser_test.cc
-    src/edit_distance_test.cc
-    src/elide_middle_test.cc
-    src/explanations_test.cc
-    src/graph_test.cc
-    src/json_test.cc
-    src/lexer_test.cc
-    src/manifest_parser_test.cc
-    src/missing_deps_test.cc
-    src/ninja_test.cc
-    src/state_test.cc
-    src/string_piece_util_test.cc
-    src/subprocess_test.cc
-    src/test.cc
-    src/util_test.cc
-	)
-  find_program(CLANG_TIDY_EXE NAMES "clang-tidy" REQUIRED)
-  # Apply clang-tidy checks to the target
-# Add a custom test for clang-tidy
-   if(CLANG_TIDY_EXE)
-    add_test(
-        NAME clang-tidy-check
-        COMMAND ${CLANG_TIDY_EXE} ${NINJA_TEST_SOURCES} --checks=-*,modernize-* --warnings-as-errors=*
-    )
-    else()
-    	message(WARNING "clang-tidy not found, skipping clang-tidy test")
-    endif()
-
-
 endif()
 
 if(NINJA_BUILD_BINARY)
