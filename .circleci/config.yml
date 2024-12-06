@@ -47,6 +47,20 @@ jobs:
               echo "Running $test"
               ./$test
             done
+      - run:
+          name: Test New Graph
+          command: |
+            echo "Testing new graph"
+            cd new-graph
+            bash easybuild.sh
+            OUTPUT=$(./hello_world)
+            if [ "$OUTPUT" = "Hello World!" ]; then
+              echo "Output is correct: $OUTPUT"
+            else
+              echo "Test failed: Expected 'Hello World!', got '$OUTPUT'"
+              exit 1
+            fi
+            echo "New graph test completed successfully"
 
 workflows:
   build-test-workflow: 
